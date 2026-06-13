@@ -3,7 +3,6 @@ import PharmacyCard from '@/components/PharmacyCard';
 
 export const revalidate = 60;
 
-// On définit le type pour rassurer TypeScript
 type Pharmacy = {
   id: string;
   name: string;
@@ -26,7 +25,6 @@ export default async function HomePage() {
     return <div className="p-4 text-red-500">Erreur de chargement des données</div>;
   }
 
-  // On précise explicitement le type du résultat du reduce
   const groupedByNeighborhood = (pharmacies as Pharmacy[]).reduce<Record<string, Pharmacy[]>>((acc, pharmacy) => {
     if (!acc[pharmacy.neighborhood]) {
       acc[pharmacy.neighborhood] = [];
