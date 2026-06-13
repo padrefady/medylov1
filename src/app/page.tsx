@@ -3,6 +3,18 @@ import PharmacyCard from '@/components/PharmacyCard';
 
 export const revalidate = 60;
 
+// On définit le type pour rassurer TypeScript
+type Pharmacy = {
+  id: string;
+  name: string;
+  address: string;
+  neighborhood: string;
+  phone: string | null;
+  whatsapp: string | null;
+  schedule: string;
+  is_garde: boolean;
+};
+
 export default async function HomePage() {
   const { data: pharmacies, error } = await supabase
     .from('pharmacies')
@@ -14,19 +26,20 @@ export default async function HomePage() {
     return <div className="p-4 text-red-500">Erreur de chargement des données</div>;
   }
 
-  const groupedByNeighborhood = pharmacies.reduce((acc, pharmacy) => {
+  // On précise explicitement le type du résultat du reduce
+  const groupedByNeighborhood = (pharmacies as Pharmacy[]).reduce<Record<string, Pharmacy[]>>((acc, pharmacy) => {
     if (!acc[pharmacy.neighborhood]) {
       acc[pharmacy.neighborhood] = [];
     }
     acc[pharmacy.neighborhood].push(pharmacy);
     return acc;
-  }, {} as Record<string, typeof pharmacies>);
+  }, {});
 
   return (
     <div className="p-4">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Pharmacies à Yaoundé</h2>
-        <p className="text-gray-500 text-sm">{pharmacies.length} pharmacies référencées</p>
+        <p className="text-gray-500 text-sm">{pharmacies?.length} pharmacies référencées</p>
       </div>
 
       {Object.entries(groupedByNeighborhood).map(([neighborhood, pharms]) => (
