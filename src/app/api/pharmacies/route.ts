@@ -8,6 +8,17 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// FONCTION POUR LIRE TOUTES LES PHARMACIES (GET) - Contourne la sécurité publique
+export async function GET() {
+  const { data, error } = await supabaseAdmin
+    .from('pharmacies')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
+}
+
 export async function POST(req: Request) {
   const body = await req.json();
   const { password, pharmacy } = body;
@@ -40,4 +51,23 @@ export async function DELETE(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
+}
+
+// FONCTION POUR MODIFIER LE STATUT D'UNE PHARMACIE (PATCH)
+export async function PATCH(req: Request) {
+  const body = await req.json();
+  const { password, id, updates } = body;
+
+  if (password !== ADMIN_PASSWORD) {
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('pharmacies')
+    .update(updates)
+    .eq('id', id)
+    .select();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data[0]);
 }
