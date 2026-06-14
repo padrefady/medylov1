@@ -5,7 +5,12 @@ import BottomNav from '@/components/BottomNav'
 export const metadata: Metadata = {
   title: 'Medylo - La Santé Plus Proche',
   description: 'Annuaire des pharmacies de Yaoundé, Cameroun',
+  icons: {
+    icon: '/logo-medylo.png', // C'est ici qu'on dit d'utiliser ton logo !
+  },
 }
+
+
 
 export default function RootLayout({
   children,
