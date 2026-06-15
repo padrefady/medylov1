@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Lock, Plus, Trash2, LogOut, Pencil, Save, XCircle } from 'lucide-react';
+import { Lock, Plus, Trash2, LogOut, Pencil, Save, XCircle, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 const ADMIN_PASSWORD = 'Medylo2024!';
@@ -112,7 +112,6 @@ export default function AdminPage() {
   const handleSaveEdit = async () => {
     if (!editForm) return;
     
-    // On retire l'id et created_at des données à envoyer à Supabase
     const { id, ...updates } = editForm;
 
     const res = await fetch('/api/pharmacies', {
@@ -128,6 +127,72 @@ export default function AdminPage() {
     } else {
       alert('Erreur lors de la modification');
     }
+  };
+
+  // FONCTION POUR L'IMPORT CSV ADAPTÉE A TES DONNÉES
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const text = await file.text();
+    const lines = text.split('\n').filter(line => line.trim() !== '');
+    
+    if (lines.length < 2) {
+      alert('Le fichier est vide ou mal formaté');
+      return;
+    }
+
+    // On récupère les en-têtes (première ligne)
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+
+    const pharmaciesToImport = lines.slice(1).map(line => {
+      const values = line.split(',').map(val => val.trim());
+      
+      // Créer un objet clé/valeur avec les en-têtes
+      const row: Record<string, string> = {};
+      headers.forEach((h, i) => {
+        row[h] = values[i] || '';
+      });
+
+      // Extraction sécurisée du téléphone (on ignore les "Via...")
+      let phone = row['telephone_contact'] || null;
+      if (phone && phone.toLowerCase().startsWith('via ')) {
+        phone = null;
+      }
+
+      return {
+        name: row['nom'] || '',
+        address: row['adresse_repere'] || '',
+        neighborhood: row['quartier'] || '',
+        phone: phone,
+        whatsapp: null, // Pas dans ton CSV, on met null
+        schedule: 'Lun-Sam: 8h-20h', // Horaires par défaut
+        is_garde: false, // Pas de garde par défaut
+        is_active: true, // Active par défaut
+      };
+    }).filter(p => p.name !== ''); // On ignore les lignes vides
+
+    if (pharmaciesToImport.length === 0) {
+      alert('Aucune pharmacie valide trouvée dans le fichier');
+      return;
+    }
+
+    const res = await fetch('/api/pharmacies/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: ADMIN_PASSWORD, pharmacies: pharmaciesToImport }),
+    });
+
+    if (res.ok) {
+      const result = await res.json();
+      alert(`🎉 ${result.count} pharmacies importées avec succès !`);
+      fetchPharmacies(); // Rafraîchit la liste
+    } else {
+      alert('Erreur lors de l\'importation.');
+    }
+
+    // Réinitialiser l'input fichier
+    e.target.value = '';
   };
 
   if (!isAuth) {
@@ -184,7 +249,26 @@ export default function AdminPage() {
         </form>
       </div>
 
-      <h3 className="font-bold text-lg mb-4">Pharmacies existantes ({pharmacies.length})</h3>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="font-bold text-lg">Pharmacies existantes ({pharmacies.length})</h3>
+        
+        <div>
+          <input 
+            type="file" 
+            accept=".csv" 
+            onChange={handleImportCSV} 
+            className="hidden" 
+            id="csv-upload"
+          />
+          <label 
+            htmlFor="csv-upload" 
+            className="flex items-center gap-2 bg-med-green text-white px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer hover:bg-green-600 transition-colors"
+          >
+            <Upload size={16} /> Importer CSV
+          </label>
+        </div>
+      </div>
+
       <div className="space-y-3">
         {pharmacies.map((p) => (
           <div key={p.id} className="bg-white p-4 rounded-lg border border-gray-100">
